@@ -20,7 +20,7 @@ st.title("Feature Selection using Information Gain with Multiple Classifiers")
 
 # Upload Excel file containing the dataset
 
-uploaded\_file = st.file\_uploader("Upload Excel dataset (.xlsx)", type=\["xlsx"])
+uploaded\_file = st.file\_uploader("Upload dataset (.xlsx or .csv)", type=\["xlsx","csv"])
 
 # Initialize an empty DataFrame to store model results
 
@@ -28,11 +28,14 @@ results\_df = pd.DataFrame(columns=\["Model", "Threshold", "Accuracy", "Precisio
 
 # MAIN PROCESS STARTS HERE
 
-if uploaded\_file is not None:
-
-# Read the uploaded Excel file
-
-data = pd.read\_excel(uploaded\_file)
+# Read the uploaded file
+if uploaded_file.name.endswith('.xlsx'):
+    data = pd.read_excel(uploaded_file)
+elif uploaded_file.name.endswith('.csv'):
+    data = pd.read_csv(uploaded_file)
+else:
+    st.error("Unsupported file format")
+    st.stop()
 
 # Show preview of the dataset
 
@@ -82,8 +85,8 @@ st.write(feature\_df)
 
 # Allow user to select Information Gain threshold
 
-selected\_threshold = st.slider("Select Information Gain Threshold", min\_value=0.0, max\_value=0.2,
-value=0.01, step=0.01)
+selected\_threshold = st.slider("Select Information Gain Threshold", min\_value=0.0, max\_value=0.05,
+value=0.05, step=0.001)
 
 # Filter features based on selected threshold
 
@@ -167,7 +170,7 @@ scores = melted\_df\[melted\_df\['Metric'] == metric]\['Score']
 ax\_bar.bar(x + i \* bar\_width, scores, width=bar\_width, label=metric)
 ax\_bar.set\_xticks(x + bar\_width)
 ax\_bar.set\_xticklabels(models)
-ax\_bar.set\_ylim(0, 1.1)
+ax\_bar.set\_ylim(0, 0.3)
 ax\_bar.set\_ylabel("Score")
 ax\_bar.set\_title("Accuracy, Precision & Recall Comparison by Model")
 ax\_bar.legend()
@@ -196,7 +199,7 @@ ax.set\_xlabel("Information Gain Threshold")
 
 ax.set\_ylabel("Score")
 
-ax.set\_ylim(0, 1.1)
+ax.set\_ylim(0, 0.3)
 
 ax.legend(bbox\_to\_anchor=(1.05, 1), loc='upper left')
 
@@ -240,7 +243,7 @@ ax\_acc.set\_xlabel("Information Gain Threshold")
 
 ax\_acc.set\_ylabel("Accuracy")
 
-ax\_acc.set\_ylim(0, 1.1)
+ax\_acc.set\_ylim(0, 0.3)
 
 ax\_acc.legend()
 
@@ -251,6 +254,3 @@ st.pyplot(fig\_acc)
 else:
 
 st.write("Please upload a dataset to generate the visualization.")
-
-Don't change anything only Update threshold range in slider, in all 3 graphd bcz my data information Gain value is short
-So add range according to that check range value in figure
