@@ -1,182 +1,123 @@
-# Check for openpyxl
-try:
-    import openpyxl
-except ImportError:
-    st.error("Missing dependency: openpyxl. Please add 'openpyxl' to your requirements.txt.")
-    st.stop()
-
-# Install streamlit if it's not already installed
-try:
-    import streamlit as st
-except ImportError:
-    !pip install streamlit
-    import streamlit as st # Import again after installation
-
+import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-
+import pickle
+import json
+import random
+from sklearn.feature_selection import mutual_info_classif
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score, precision_score, recall_score
 
+st.set_page_config(page_title="Career Path Predictor with IG Feature Selection", layout="centered")
 
-st.title("Feature Selection using Information Gain with Multiple Classifiers")
+st.title("Career Path Predictor with Feature Selection via Information Gain")
 
-# File uploader
-uploaded_file = st.file_uploader("Upload Excel dataset (.xlsx)", type=["xlsx"])
-results_df = pd.DataFrame(columns=["Model", "Threshold", "Accuracy", "Precision", "Recall"])
+# Step 1: Upload Dataset
+uploaded_file = st.file_uploader("Upload your dataset CSV file", type=["csv"])
 
 if uploaded_file is not None:
-    try:
-        data = pd.read_excel(uploaded_file)
-    except Exception as e:
-        st.error(f"Error reading the Excel file: {e}")
-        st.stop()
-
+    data = pd.read_csv(uploaded_file)
     st.subheader("Dataset Preview")
     st.write(data.head())
+    st.write(f"Shape: {data.shape}")
+    st.write("Data Types:")
+    st.write(data.dtypes)
 
-    data.dropna(inplace=True)
-
-    # Encode categorical columns
-    label_encoders = {}
-    for col in data.select_dtypes(include='object').columns:
-        le = LabelEncoder()
-        data[col] = le.fit_transform(data[col])
-        label_encoders[col] = le
-
+    # Step 2: Select target column
     target_col = st.selectbox("Select the Target Column", options=data.columns)
-    X = data.drop(target_col, axis=1)
-    y = data[target_col]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    if target_col:
+        # Separate features and target
+        X = data.drop(columns=[target_col])
+        y = data[target_col]
 
-    base_tree = DecisionTreeClassifier(criterion='entropy', random_state=42)
-    base_tree.fit(X_train, y_train)
-    info_gain = base_tree.feature_importances_
+        # Encode target column
+        target_encoder = LabelEncoder()
+        y_enc = target_encoder.fit_transform(y.astype(str))
 
-    feature_df = pd.DataFrame({'Feature': X.columns, 'Information_Gain': info_gain})
-    feature_df.sort_values(by='Information_Gain', ascending=False, inplace=True)
+        # Encode categorical features for IG
+        X_encoded = X.copy()
+        encoders = {}
+        for col in X_encoded.columns:
+            if X_encoded[col].dtype == 'object' or str(X_encoded[col].dtype).startswith('category'):
+                le = LabelEncoder()
+                X_encoded[col] = le.fit_transform(X_encoded[col].astype(str))
+                encoders[col] = le
+            else:
+                # Keep numeric as is
+                try:
+                    X_encoded[col] = X_encoded[col].astype(float)
+                except:
+                    X_encoded[col] = 0
 
-    st.subheader("Feature Importances (Information Gain)")
-    st.write(feature_df)
+        # Step 3: Compute Information Gain (Mutual Information)
+        mi_scores = mutual_info_classif(X_encoded, y_enc, discrete_features='auto', random_state=42)
+        mi_df = pd.DataFrame({"Feature": X_encoded.columns, "Information Gain": mi_scores})
+        mi_df = mi_df.sort_values(by="Information Gain", ascending=False).reset_index(drop=True)
 
-    selected_threshold = st.slider("Select Information Gain Threshold", min_value=0.0, max_value=0.04, value=0.01, step=0.01)
-    selected_features = feature_df[feature_df["Information_Gain"] > selected_threshold]["Feature"].tolist()
+        st.subheader("Information Gain of Features")
+        st.dataframe(mi_df.style.format({"Information Gain": "{:.4f}"}))
 
-    st.markdown(f"### Selected Features with Threshold {selected_threshold}:")
-    st.write(selected_features)
+        # Step 4: Threshold slider
+        max_ig = mi_df["Information Gain"].max()
+        threshold = st.slider("Select Information Gain Threshold", 0.0, float(max_ig), 0.01, 0.005)
 
-    results = []
+        # Select features above threshold
+        selected_features = mi_df[mi_df["Information Gain"] >= threshold]["Feature"].tolist()
 
-    for thresh in np.arange(0.0, 0.041, 0.01):
-        selected = feature_df[feature_df["Information_Gain"] > thresh]["Feature"].tolist()
-        if not selected:
-            continue
+        st.write(f"Features selected (threshold >= {threshold}): {len(selected_features)}")
+        st.write(selected_features)
 
-        X_train_sel = X_train[selected]
-        X_test_sel = X_test[selected]
+        # Step 5: Load question bank
+        with open("questions.json") as f:
+            questions = json.load(f)
 
-        models = {
-            "Decision Tree": DecisionTreeClassifier(random_state=42),
-            "KNN": KNeighborsClassifier(n_neighbors=5),
-            "Naive Bayes": GaussianNB()
-        }
+        # Step 6: Ask questions only for selected features present in question bank
+        st.subheader("Answer Questions")
 
-        for model_name, model in models.items():
-            model.fit(X_train_sel, y_train)
-            y_pred = model.predict(X_test_sel)
+        responses = {}
+        for feature in selected_features:
+            if feature in questions:
+                q = random.choice(questions[feature])
+                responses[feature] = st.radio(
+                    label=f"**{feature.replace('_', ' ').title()}**: {q['question']}",
+                    options=q["options"],
+                    key=feature
+                )
+            else:
+                # If no question for feature, allow text input or skip
+                responses[feature] = st.text_input(f"Enter value for {feature.replace('_', ' ').title()}:", key=feature)
 
-            acc = accuracy_score(y_test, y_pred)
-            prec = precision_score(y_test, y_pred, average='macro')
-            rec = recall_score(y_test, y_pred, average='macro')
+        # Step 7: Load model
+        with open("model.pkl", "rb") as f:
+            model, model_encoders, model_target_encoder = pickle.load(f)
 
-            results.append({
-                "Model": model_name,
-                "Threshold": thresh,
-                "Accuracy": acc,
-                "Precision": prec,
-                "Recall": rec
-            })
+        if st.button("Predict Career Field"):
+            # Check all responses provided
+            if len(responses) < len(selected_features):
+                st.warning("Please answer all questions.")
+            else:
+                try:
+                    input_vector = []
+                    for f in selected_features:
+                        val = responses[f]
+                        # Use model encoders to transform if available
+                        if f in model_encoders:
+                            val = model_encoders[f].transform([val])[0]
+                        else:
+                            # Try to convert to float else default 0
+                            try:
+                                val = float(val)
+                            except:
+                                val = 0
+                        input_vector.append(val)
 
-    results_df = pd.DataFrame(results)
+                    pred = model.predict([input_vector])[0]
+                    career_pred = model_target_encoder.inverse_transform([pred])[0]
 
-    filtered_df = results_df[results_df["Threshold"] == selected_threshold]
+                    st.success(f"### Predicted Career Field: **{career_pred}**")
+                    st.balloons()
+                except Exception as e:
+                    st.error(f"Prediction error: {e}")
 
-    if not filtered_df.empty:
-        st.subheader(f"Model Comparison at Threshold = {selected_threshold}")
-
-        melted_df = filtered_df.melt(id_vars=["Model"],
-                                     value_vars=["Accuracy", "Precision", "Recall"],
-                                     var_name="Metric",
-                                     value_name="Score")
-
-        fig_bar, ax_bar = plt.subplots(figsize=(8, 5))
-        metrics = melted_df['Metric'].unique()
-        models = melted_df['Model'].unique()
-        bar_width = 0.2
-        x = np.arange(len(models))
-
-        max_score = melted_df["Score"].max()
-        y_limit = max(1.0, round(max_score + 0.05, 2))
-
-        for i, metric in enumerate(metrics):
-            scores = melted_df[melted_df['Metric'] == metric]['Score'].tolist()
-            ax_bar.bar(x + i * bar_width, scores, width=bar_width, label=metric)
-
-        ax_bar.set_xticks(x + bar_width)
-        ax_bar.set_xticklabels(models)
-        ax_bar.set_ylim(0, y_limit)
-        ax_bar.set_ylabel("Score")
-        ax_bar.set_title("Accuracy, Precision & Recall Comparison by Model")
-        ax_bar.legend()
-        ax_bar.grid(True)
-        st.pyplot(fig_bar)
-    else:
-        st.warning("No features selected for this threshold. Please choose a lower threshold.")
-
-    st.subheader("Performance Summary")
-    st.dataframe(results_df)
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for metric in ['Accuracy', 'Precision', 'Recall']:
-        for model in results_df['Model'].unique():
-            subset = results_df[results_df['Model'] == model]
-            ax.plot(subset['Threshold'], subset[metric], marker='o', label=f"{model} - {metric}")
-
-    ax.set_title("Model Performance vs. Information Gain Threshold")
-    ax.set_xlabel("Information Gain Threshold")
-    ax.set_ylabel("Score")
-    ax.set_ylim(0, 1.1)
-    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    ax.grid(True)
-    fig.tight_layout()
-    st.pyplot(fig)
-
-    st.subheader("Best Model by Metric")
-    for metric in ["Accuracy", "Precision", "Recall"]:
-        idx = results_df[metric].idxmax()
-        st.markdown(f"*{metric}:* Best Model: {results_df.loc[idx, 'Model']}, "
-                    f"Threshold: {results_df.loc[idx, 'Threshold']}, "
-                    f"Score: {results_df.loc[idx, metric]:.2f}")
-
-    st.subheader("Visualization Pilot: Accuracy vs. Information Gain Threshold")
-    if not results_df.empty:
-        fig_acc, ax_acc = plt.subplots(figsize=(8, 5))
-        for model in results_df['Model'].unique():
-            model_data = results_df[results_df['Model'] == model]
-            ax_acc.plot(model_data['Threshold'], model_data['Accuracy'], marker='o', label=model)
-
-        ax_acc.set_title("Accuracy vs. Information Gain Threshold")
-        ax_acc.set_xlabel("Information Gain Threshold")
-        ax_acc.set_ylabel("Accuracy")
-        ax_acc.set_ylim(0, 1.1)
-        ax_acc.legend()
-        ax_acc.grid(True)
-        st.pyplot(fig_acc)
-    else:
-        st.write("Please upload a dataset to generate the visualization.")
+else:
+    st.info("Please upload a CSV dataset to begin.")
