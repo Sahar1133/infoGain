@@ -1,12 +1,10 @@
 # Importing required libraries
-
 import pandas as pd
 import numpy as np
 import streamlit as st
 import matplotlib.pyplot as plt
 
 # Machine learning and preprocessing libraries
-
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
@@ -15,242 +13,180 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 # Title of the Streamlit Web Application
-
 st.title("Feature Selection using Information Gain with Multiple Classifiers")
 
-# Upload Excel file containing the dataset
-
-uploaded\_file = st.file\_uploader("Upload dataset (.xlsx or .csv)", type=\["xlsx","csv"])
+# Upload Excel or CSV file containing the dataset
+uploaded_file = st.file_uploader("Upload dataset (.xlsx or .csv)", type=["xlsx", "csv"])
 
 # Initialize an empty DataFrame to store model results
-
-results\_df = pd.DataFrame(columns=\["Model", "Threshold", "Accuracy", "Precision", "Recall"])
+results_df = pd.DataFrame(columns=["Model", "Threshold", "Accuracy", "Precision", "Recall"])
 
 # MAIN PROCESS STARTS HERE
-
-# Read the uploaded file
-if uploaded_file.name.endswith('.xlsx'):
-    data = pd.read_excel(uploaded_file)
-elif uploaded_file.name.endswith('.csv'):
-    data = pd.read_csv(uploaded_file)
-else:
-    st.error("Unsupported file format")
-    st.stop()
-
-# Show preview of the dataset
-
-st.subheader("Dataset Preview")
-st.write(data.head())
-
-# Drop rows with any missing values to ensure clean training data
-
-data.dropna(inplace=True)
-
-# Label Encode categorical features
-
-label\_encoders = {}
-for col in data.select\_dtypes(include='object').columns:
-le = LabelEncoder()
-data\[col] = le.fit\_transform(data\[col])
-label\_encoders\[col] = le # Store encoder for potential inverse transform
-
-# Select Target Column
-
-target\_col = st.selectbox("Select the Target Column", options=data.columns)
-X = data.drop(target\_col, axis=1) # Features
-y = data\[target\_col] # Target label
-
-# Split data into train and test sets
-
-X\_train, X\_test, y\_train, y\_test = train\_test\_split(X, y, test\_size=0.3, random\_state=42)
-
-# Calculate Information Gain using Decision Tree
-
-base\_tree = DecisionTreeClassifier(criterion='entropy', random\_state=42)
-base\_tree.fit(X\_train, y\_train)
-
-# Get feature importances (Information Gain)
-
-info\_gain = base\_tree.feature\_importances\_
-
-# Create DataFrame of features and their information gain
-
-feature\_df = pd.DataFrame({'Feature': X.columns, 'Information\_Gain': info\_gain})
-feature\_df.sort\_values(by='Information\_Gain', ascending=False, inplace=True)
-
-# Display feature importance table
-
-st.subheader("Feature Importances (Information Gain)")
-st.write(feature\_df)
-
-# Allow user to select Information Gain threshold
-
-selected\_threshold = st.slider("Select Information Gain Threshold", min\_value=0.0, max\_value=0.05,
-value=0.05, step=0.001)
-
-# Filter features based on selected threshold
-
-selected\_features = feature\_df\[feature\_df\["Information\_Gain"] > selected\_threshold]\["Feature"].tolist()
-st.markdown(f"### Selected Features with Threshold {selected\_threshold}:")
-st.write(selected\_features)
-
-# Initialize results list
-
-results = \[]
-
-# Iterate through thresholds and train classifiers
-
-for thresh in np.arange(0.0, 0.21, 0.01): # From 0.0 to 0.2 in 0.01 steps
-selected = feature\_df\[feature\_df\["Information\_Gain"] > thresh]\["Feature"].tolist()
-if not selected: # Skip if no features meet the threshold
-continue
-
-# Subset train and test data based on selected features
-
-X\_train\_sel = X\_train\[selected]
-X\_test\_sel = X\_test\[selected]
-
-# Initialize three models
-
-models = {
-"Decision Tree": DecisionTreeClassifier(random\_state=42),
-"KNN": KNeighborsClassifier(n\_neighbors=5),
-"Naive Bayes": GaussianNB()
-}
-
-# Train and evaluate each model
-
-for model\_name, model in models.items():
-model.fit(X\_train\_sel, y\_train)
-y\_pred = model.predict(X\_test\_sel)
-
-# Calculate performance metrics
-
-acc = accuracy\_score(y\_test, y\_pred)
-prec = precision\_score(y\_test, y\_pred, average='macro')
-rec = recall\_score(y\_test, y\_pred, average='macro')
-
-# Append result for current model and threshold
-
-results.append({
-"Model": model\_name,
-"Threshold": thresh,
-"Accuracy": acc,
-"Precision": prec,
-"Recall": rec
-})
-
-# Convert list of results to DataFrame
-
-results\_df = pd.DataFrame(results)
-
-# Filter and visualize model results for current threshold
-
-filtered\_df = results\_df\[results\_df\["Threshold"] == selected\_threshold] if 'selected\_threshold' in locals() else
-pd.DataFrame(columns=\["Model", "Threshold", "Accuracy", "Precision", "Recall"])
-if not filtered\_df.empty:
-st.subheader(f"Model Comparison at Threshold = {selected\_threshold}")
-
-# Prepare data for grouped bar plot
-
-melted\_df = filtered\_df.melt(id\_vars=\["Model"],
-value\_vars=\["Accuracy", "Precision", "Recall"],
-var\_name="Metric",
-value\_name="Score")
-
-# Plot bar chart
-
-fig\_bar, ax\_bar = plt.subplots(figsize=(8, 5))
-metrics = melted\_df\['Metric'].unique()
-models = melted\_df\['Model'].unique()
-bar\_width = 0.2
-x = np.arange(len(models))
-for i, metric in enumerate(metrics):
-scores = melted\_df\[melted\_df\['Metric'] == metric]\['Score']
-ax\_bar.bar(x + i \* bar\_width, scores, width=bar\_width, label=metric)
-ax\_bar.set\_xticks(x + bar\_width)
-ax\_bar.set\_xticklabels(models)
-ax\_bar.set\_ylim(0, 0.3)
-ax\_bar.set\_ylabel("Score")
-ax\_bar.set\_title("Accuracy, Precision & Recall Comparison by Model")
-ax\_bar.legend()
-ax\_bar.grid(True)
-st.pyplot(fig\_bar)
-else:
-st.warning("No features selected for this threshold. Please choose a lower threshold.")
-
-# Full Results Summary and Overall Model Performance
-
-if uploaded\_file is not None:
-st.subheader("Performance Summary")
-st.dataframe(results\_df)
-
-# Line plot for Accuracy/Precision/Recall over thresholds
-
-fig, ax = plt.subplots(figsize=(10, 6))
-for metric in \['Accuracy', 'Precision', 'Recall']:
-for model in results\_df\['Model'].unique():
-subset = results\_df\[results\_df\['Model'] == model]
-ax.plot(subset\['Threshold'], subset\[metric], marker='o', label=f"{model} - {metric}")
-
-ax.set\_title("Model Performance vs. Information Gain Threshold")
-
-ax.set\_xlabel("Information Gain Threshold")
-
-ax.set\_ylabel("Score")
-
-ax.set\_ylim(0, 0.3)
-
-ax.legend(bbox\_to\_anchor=(1.05, 1), loc='upper left')
-
-ax.grid(True)
-
-fig.tight\_layout()
-
-st.pyplot(fig)
-
-# Highlight the best score across all models and metrics
-
-st.subheader("Best Model by Metric")
-
-for metric in \["Accuracy", "Precision", "Recall"]:
-
-idx = results\_df\[metric].idxmax()
-
-st.markdown(f"**{metric}:** Best Model: `{results_df.loc[idx, 'Model']}`, "
-
-f"Threshold: `{results_df.loc[idx, 'Threshold']}`, "
-
-f"Score: `{results_df.loc[idx, metric]:.2f}`")
-
-# Additional Visualization: Accuracy vs Threshold
-
-st.subheader("Visualization Pilot: Accuracy vs. Information Gain Threshold")
-
-if not results\_df.empty:
-
-fig\_acc, ax\_acc = plt.subplots(figsize=(8, 5))
-
-for model in results\_df\['Model'].unique():
-
-model\_data = results\_df\[results\_df\['Model'] == model]
-
-ax\_acc.plot(model\_data\['Threshold'], model\_data\['Accuracy'], marker='o', label=model)
-
-ax\_acc.set\_title("Accuracy vs. Information Gain Threshold")
-
-ax\_acc.set\_xlabel("Information Gain Threshold")
-
-ax\_acc.set\_ylabel("Accuracy")
-
-ax\_acc.set\_ylim(0, 0.3)
-
-ax\_acc.legend()
-
-ax\_acc.grid(True)
-
-st.pyplot(fig\_acc)
-
-else:
-
-st.write("Please upload a dataset to generate the visualization.")
+if uploaded_file is not None:
+    # Read the uploaded file
+    if uploaded_file.name.endswith('.xlsx'):
+        data = pd.read_excel(uploaded_file)
+    elif uploaded_file.name.endswith('.csv'):
+        data = pd.read_csv(uploaded_file)
+    else:
+        st.error("Unsupported file format")
+        st.stop()
+
+    # Show preview of the dataset
+    st.subheader("Dataset Preview")
+    st.write(data.head())
+
+    # Drop rows with any missing values to ensure clean training data
+    data.dropna(inplace=True)
+
+    # Label Encode categorical features
+    label_encoders = {}
+    for col in data.select_dtypes(include='object').columns:
+        le = LabelEncoder()
+        data[col] = le.fit_transform(data[col])
+        label_encoders[col] = le
+
+    # Select Target Column
+    target_col = st.selectbox("Select the Target Column", options=data.columns)
+    X = data.drop(target_col, axis=1)
+    y = data[target_col]
+
+    # Split data into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    # Calculate Information Gain using Decision Tree
+    base_tree = DecisionTreeClassifier(criterion='entropy', random_state=42)
+    base_tree.fit(X_train, y_train)
+
+    # Get feature importances (Information Gain)
+    info_gain = base_tree.feature_importances_
+
+    # Create DataFrame of features and their information gain
+    feature_df = pd.DataFrame({'Feature': X.columns, 'Information_Gain': info_gain})
+    feature_df.sort_values(by='Information_Gain', ascending=False, inplace=True)
+
+    # Display feature importance table
+    st.subheader("Feature Importances (Information Gain)")
+    st.write(feature_df)
+
+    # Allow user to select Information Gain threshold
+    selected_threshold = st.slider("Select Information Gain Threshold", min_value=0.0, max_value=0.05,
+                                   value=0.005, step=0.001)
+
+    # Filter features based on selected threshold
+    selected_features = feature_df[feature_df["Information_Gain"] > selected_threshold]["Feature"].tolist()
+    st.markdown(f"### Selected Features with Threshold {selected_threshold}:")
+    st.write(selected_features)
+
+    # Initialize results list
+    results = []
+
+    # Iterate through thresholds and train classifiers
+    for thresh in np.arange(0.0, 0.051, 0.001):
+        selected = feature_df[feature_df["Information_Gain"] > thresh]["Feature"].tolist()
+        if not selected:
+            continue
+        X_train_sel = X_train[selected]
+        X_test_sel = X_test[selected]
+
+        models = {
+            "Decision Tree": DecisionTreeClassifier(random_state=42),
+            "KNN": KNeighborsClassifier(n_neighbors=5),
+            "Naive Bayes": GaussianNB()
+        }
+
+        for model_name, model in models.items():
+            model.fit(X_train_sel, y_train)
+            y_pred = model.predict(X_test_sel)
+
+            acc = accuracy_score(y_test, y_pred)
+            prec = precision_score(y_test, y_pred, average='macro')
+            rec = recall_score(y_test, y_pred, average='macro')
+
+            results.append({
+                "Model": model_name,
+                "Threshold": thresh,
+                "Accuracy": acc,
+                "Precision": prec,
+                "Recall": rec
+            })
+
+    results_df = pd.DataFrame(results)
+
+    # Filter and visualize model results for current threshold
+    filtered_df = results_df[results_df["Threshold"] == selected_threshold] if 'selected_threshold' in locals() else pd.DataFrame(columns=["Model", "Threshold", "Accuracy", "Precision", "Recall"])
+
+    if not filtered_df.empty:
+        st.subheader(f"Model Comparison at Threshold = {selected_threshold}")
+
+        melted_df = filtered_df.melt(id_vars=["Model"],
+                                     value_vars=["Accuracy", "Precision", "Recall"],
+                                     var_name="Metric",
+                                     value_name="Score")
+
+        fig_bar, ax_bar = plt.subplots(figsize=(8, 5))
+        metrics = melted_df['Metric'].unique()
+        models = melted_df['Model'].unique()
+        bar_width = 0.2
+        x = np.arange(len(models))
+
+        for i, metric in enumerate(metrics):
+            scores = melted_df[melted_df['Metric'] == metric]['Score']
+            ax_bar.bar(x + i * bar_width, scores, width=bar_width, label=metric)
+
+        ax_bar.set_xticks(x + bar_width)
+        ax_bar.set_xticklabels(models)
+        ax_bar.set_ylim(0, 0.3)
+        ax_bar.set_ylabel("Score")
+        ax_bar.set_title("Accuracy, Precision & Recall Comparison by Model")
+        ax_bar.legend()
+        ax_bar.grid(True)
+        st.pyplot(fig_bar)
+    else:
+        st.warning("No features selected for this threshold. Please choose a lower threshold.")
+
+    # Full Results Summary
+    st.subheader("Performance Summary")
+    st.dataframe(results_df)
+
+    # Line plot for Accuracy/Precision/Recall over thresholds
+    fig, ax = plt.subplots(figsize=(10, 6))
+    for metric in ['Accuracy', 'Precision', 'Recall']:
+        for model in results_df['Model'].unique():
+            subset = results_df[results_df['Model'] == model]
+            ax.plot(subset['Threshold'], subset[metric], marker='o', label=f"{model} - {metric}")
+
+    ax.set_title("Model Performance vs. Information Gain Threshold")
+    ax.set_xlabel("Information Gain Threshold")
+    ax.set_ylabel("Score")
+    ax.set_ylim(0, 0.3)
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.grid(True)
+    fig.tight_layout()
+    st.pyplot(fig)
+
+    # Highlight best model for each metric
+    st.subheader("Best Model by Metric")
+    for metric in ["Accuracy", "Precision", "Recall"]:
+        idx = results_df[metric].idxmax()
+        st.markdown(f"**{metric}:** Best Model: `{results_df.loc[idx, 'Model']}`, "
+                    f"Threshold: `{results_df.loc[idx, 'Threshold']}`, "
+                    f"Score: `{results_df.loc[idx, metric]:.3f}`")
+
+    # Accuracy vs Threshold (Line Plot)
+    st.subheader("Visualization Pilot: Accuracy vs. Information Gain Threshold")
+    if not results_df.empty:
+        fig_acc, ax_acc = plt.subplots(figsize=(8, 5))
+        for model in results_df['Model'].unique():
+            model_data = results_df[results_df['Model'] == model]
+            ax_acc.plot(model_data['Threshold'], model_data['Accuracy'], marker='o', label=model)
+
+        ax_acc.set_title("Accuracy vs. Information Gain Threshold")
+        ax_acc.set_xlabel("Information Gain Threshold")
+        ax_acc.set_ylabel("Accuracy")
+        ax_acc.set_ylim(0, 0.3)
+        ax_acc.legend()
+        ax_acc.grid(True)
+        st.pyplot(fig_acc)
+    else:
+        st.write("Please upload a dataset to generate the visualization.")
