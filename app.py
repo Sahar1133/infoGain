@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 # Machine learning and preprocessing libraries
 
-from sklearn.model_selection import train\_test\_split
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
