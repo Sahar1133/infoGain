@@ -1,13 +1,6 @@
 import pandas as pd
 import numpy as np
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score, precision_score, recall_score
-
 st.title("Feature Selection using Information Gain with Multiple Classifiers")
 
 uploaded_file = st.file_uploader("Upload Excel dataset (.xlsx)", type=["xlsx"])
