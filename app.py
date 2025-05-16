@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 
 # Machine learning and preprocessing libraries
 
-from sklearn.model\_selection import train\_test\_split
+from sklearn.model_selection import train\_test\_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive\_bayes import GaussianNB
-from sklearn.metrics import accuracy\_score, precision\_score, recall\_score
+from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 # Title of the Streamlit Web Application
 
