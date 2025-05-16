@@ -1,9 +1,3 @@
-\[media pointer="file-service://file-9Uk6Tc1LvKVjMAqz9SjZGJ"]
-
-# Install Streamlit (if not already installed) in your environment
-
-!pip install streamlit
-
 # Importing required libraries
 
 import pandas as pd
