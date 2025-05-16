@@ -49,14 +49,14 @@ if uploaded_file is not None:
     st.subheader("Feature Importances (Information Gain)")
     st.write(feature_df)
 
-    selected_threshold = st.slider("Select Information Gain Threshold", min_value=0.0, max_value=0.05, value=0.005, step=0.001)
+    selected_threshold = st.slider("Select Information Gain Threshold", min_value=0.0, max_value=0.05, value=0.01, step=0.01)
     selected_features = feature_df[feature_df["Information_Gain"] > selected_threshold]["Feature"].tolist()
     st.markdown(f"### Selected Features with Threshold {selected_threshold}:")
     st.write(selected_features)
 
     results = []
 
-    for thresh in np.arange(0.0, 0.051, 0.001):
+    for thresh in np.arange(0.0, 0.21, 0.01):
         selected = feature_df[feature_df["Information_Gain"] > thresh]["Feature"].tolist()
         if not selected:
             continue
