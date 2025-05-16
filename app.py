@@ -2,7 +2,12 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 
-
+# Attempt to import openpyxl, which is required for reading .xlsx files
+try:
+    import openpyxl
+except ImportError:
+    st.error("The 'openpyxl' library is required to read Excel files. Please install it by running `pip install openpyxl`.")
+    st.stop()  # Stop further execution of the app if openpyxl is missing
 # Streamlit Title
 st.title("Feature Selection using Information Gain with Multiple Classifiers")
 
