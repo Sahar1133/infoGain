@@ -89,15 +89,23 @@ if uploaded_file is not None:
     results_df = pd.DataFrame(results)
     filtered_df = results_df[results_df["Threshold"] == round(selected_threshold, 3)]
 
+   # ... (previous code remains the same until the visualization parts)
+
     if not filtered_df.empty:
         st.subheader(f"Model Comparison at Threshold = {selected_threshold}")
         melted_df = filtered_df.melt(id_vars=["Model"], value_vars=["Accuracy", "Precision", "Recall"],
                                      var_name="Metric", value_name="Score")
-        fig_bar, ax_bar = plt.subplots(figsize=(8, 5))
+        fig_bar, ax_bar = plt.subplots(figsize=(10, 6))  # Increased figure size
         metrics = melted_df['Metric'].unique()
         models = melted_df['Model'].unique()
-        bar_width = 0.2
+        bar_width = 0.25  # Adjusted bar width
         x = np.arange(len(models))
+
+        # Find the min and max scores to set appropriate y-axis limits
+        min_score = melted_df['Score'].min()
+        max_score = melted_df['Score'].max()
+        y_lower = max(0, min_score - 0.1) if min_score > 0.1 else 0
+        y_upper = min(1, max_score + 0.1) if max_score < 0.9 else 1.1
 
         for i, metric in enumerate(metrics):
             scores = melted_df[melted_df['Metric'] == metric]['Score']
@@ -105,7 +113,7 @@ if uploaded_file is not None:
 
         ax_bar.set_xticks(x + bar_width)
         ax_bar.set_xticklabels(models)
-        ax_bar.set_ylim(0, 1.1)
+        ax_bar.set_ylim(y_lower, y_upper)  # Dynamic y-axis limits
         ax_bar.set_ylabel("Score")
         ax_bar.set_title("Accuracy, Precision & Recall Comparison by Model")
         ax_bar.legend()
@@ -117,15 +125,22 @@ if uploaded_file is not None:
     st.subheader("Performance Summary")
     st.dataframe(results_df)
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(12, 7))  # Increased figure size
     for metric in ['Accuracy', 'Precision', 'Recall']:
         for model in results_df['Model'].unique():
             subset = results_df[results_df['Model'] == model]
-            ax.plot(subset['Threshold'], subset[metric], marker='o', label=f"{model} - {metric}")
-    ax.set_title("Model Performance vs. Information Gain Threshold")
+            ax.plot(subset['Threshold'], subset[metric], marker='o', markersize=8, label=f"{model} - {metric}")  # Increased marker size
+    
+    # Adjust y-axis limits based on data
+    min_score = results_df[['Accuracy', 'Precision', 'Recall']].min().min()
+    max_score = results_df[['Accuracy', 'Precision', 'Recall']].max().max()
+    y_lower = max(0, min_score - 0.1) if min_score > 0.1 else 0
+    y_upper = min(1, max_score + 0.1) if max_score < 0.9 else 1.1
+    
+    ax.set_title("Model Performance vs. Information Gain Threshold", pad=20)
     ax.set_xlabel("Information Gain Threshold")
     ax.set_ylabel("Score")
-    ax.set_ylim(0, 1.1)
+    ax.set_ylim(y_lower, y_upper)  # Dynamic y-axis limits
     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     ax.grid(True)
     fig.tight_layout()
@@ -139,14 +154,23 @@ if uploaded_file is not None:
                     f"Score: `{results_df.loc[idx, metric]:.2f}`")
 
     st.subheader("Accuracy vs. Information Gain Threshold")
-    fig_acc, ax_acc = plt.subplots(figsize=(8, 5))
+    fig_acc, ax_acc = plt.subplots(figsize=(10, 6))  # Increased figure size
     for model in results_df['Model'].unique():
         model_data = results_df[results_df['Model'] == model]
-        ax_acc.plot(model_data['Threshold'], model_data['Accuracy'], marker='o', label=model)
-    ax_acc.set_title("Accuracy vs. Information Gain Threshold")
+        ax_acc.plot(model_data['Threshold'], model_data['Accuracy'], marker='o', markersize=8, label=model)  # Increased marker size
+    
+    # Adjust y-axis limits based on data
+    min_acc = results_df['Accuracy'].min()
+    max_acc = results_df['Accuracy'].max()
+    y_lower_acc = max(0, min_acc - 0.1) if min_acc > 0.1 else 0
+    y_upper_acc = min(1, max_acc + 0.1) if max_acc < 0.9 else 1.1
+    
+    ax_acc.set_title("Accuracy vs. Information Gain Threshold", pad=20)
     ax_acc.set_xlabel("Information Gain Threshold")
     ax_acc.set_ylabel("Accuracy")
-    ax_acc.set_ylim(0, 1.1)
+    ax_acc.set_ylim(y_lower_acc, y_upper_acc)  # Dynamic y-axis limits
     ax_acc.legend()
     ax_acc.grid(True)
     st.pyplot(fig_acc)
+
+# ... (rest of the code remains the same)
