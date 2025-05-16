@@ -1,24 +1,30 @@
 import pandas as pd
-import numpy as np
 import streamlit as st
 
-# Attempt to import openpyxl, which is required for reading .xlsx files
+# Try importing openpyxl, which pandas needs to read .xlsx files
 try:
     import openpyxl
 except ImportError:
     st.error("The 'openpyxl' library is required to read Excel files. Please install it by running `pip install openpyxl`.")
-    st.stop()  # Stop further execution of the app if openpyxl is missing
-# Streamlit Title
+    st.stop()  # Stop further execution if openpyxl is missing
+
 st.title("Feature Selection using Information Gain with Multiple Classifiers")
 
 # File upload
 uploaded_file = st.file_uploader("Upload Excel dataset (.xlsx)", type=["xlsx"])
-results_df = pd.DataFrame(columns=["Model", "Threshold", "Accuracy", "Precision", "Recall"])
 
 if uploaded_file is not None:
-    data = pd.read_excel(uploaded_file)
-    st.subheader("Dataset Preview")
-    st.write(data.head())
+    try:
+        # Read the uploaded Excel file
+        data = pd.read_excel(uploaded_file)
+        st.subheader("Dataset Preview")
+        st.write(data.head())
+    except Exception as e:
+        st.error(f"Error reading the Excel file: {e}")
+        st.stop()  # Stop execution if there is an issue reading the file
+
+    # Continue with the rest of your processing
+
 
     # Clean dataset by removing missing values
     data.dropna(inplace=True)
