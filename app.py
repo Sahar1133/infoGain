@@ -13,9 +13,6 @@ st.title("Feature Selection using Information Gain with Multiple Classifiers")
 
 uploaded_file = st.file_uploader("Upload dataset (.xlsx or .csv)", type=["xlsx", "csv"])
 
-# Initialize results dataframe
-results_df = pd.DataFrame(columns=["Model", "Threshold", "Accuracy", "Precision", "Recall"])
-
 if uploaded_file is not None:
     if uploaded_file.name.endswith(".csv"):
         data = pd.read_csv(uploaded_file)
@@ -56,15 +53,13 @@ if uploaded_file is not None:
     # Dynamic threshold range based on actual feature importances
     max_ig = feature_df['Information_Gain'].max()
     min_ig = feature_df['Information_Gain'].min()
-    
-    # Set reasonable step size based on the range
     step_size = max(0.001, round((max_ig - min_ig)/20, 3))
     
     selected_threshold = st.slider(
         "Select Information Gain Threshold",
         min_value=0.0,
-        max_value=float(max_ig * 1.1),  # Slightly above max for visibility
-        value=float(max_ig * 0.1),  # Default to 10% of max
+        max_value=float(max_ig * 1.1),
+        value=float(max_ig * 0.1),
         step=step_size,
         format="%.4f"
     )
@@ -75,7 +70,7 @@ if uploaded_file is not None:
 
     # Evaluate models at different thresholds
     results = []
-    threshold_values = np.linspace(0.0, max_ig * 1.1, 20)  # More points near actual values
+    threshold_values = np.linspace(0.0, max_ig * 1.1, 20)
     
     for thresh in threshold_values:
         selected = feature_df[feature_df["Information_Gain"] > thresh]["Feature"].tolist()
@@ -101,7 +96,7 @@ if uploaded_file is not None:
 
             results.append({
                 "Model": model_name,
-                "Threshold": round(thresh, 6),  # More precision for small values
+                "Threshold": round(thresh, 6),
                 "Accuracy": acc,
                 "Precision": prec,
                 "Recall": rec
@@ -124,24 +119,38 @@ if uploaded_file is not None:
             melted_df = filtered_df.melt(id_vars=["Model"], value_vars=["Accuracy", "Precision", "Recall"],
                                          var_name="Metric", value_name="Score")
             
+            # Calculate dynamic y-axis limits
+            min_score = melted_df['Score'].min()
+            max_score = melted_df['Score'].max()
+            y_lower = max(0, min_score - 0.1)
+            y_upper = min(1, max_score + 0.1)
+
             fig_bar, ax_bar = plt.subplots(figsize=(10, 6))
             metrics = melted_df['Metric'].unique()
             models = melted_df['Model'].unique()
             bar_width = 0.25
             x = np.arange(len(models))
 
-            colors = ['#1f77b4', '#ff7f0e', '#2ca02c']  # Distinct colors
+            colors = ['#1f77b4', '#ff7f0e', '#2ca02c']
             for i, metric in enumerate(metrics):
                 scores = melted_df[melted_df['Metric'] == metric]['Score']
                 ax_bar.bar(x + i * bar_width, scores, width=bar_width, label=metric, color=colors[i])
 
             ax_bar.set_xticks(x + bar_width)
             ax_bar.set_xticklabels(models, rotation=45)
-            ax_bar.set_ylim(0, 1.1)
+            ax_bar.set_ylim(y_lower, y_upper)
             ax_bar.set_ylabel("Score")
             ax_bar.set_title(f"Performance at Threshold = {selected_threshold:.4f}")
             ax_bar.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             ax_bar.grid(True, alpha=0.3)
+
+            # Add value labels
+            for i, metric in enumerate(metrics):
+                scores = melted_df[melted_df['Metric'] == metric]['Score']
+                for j, score in enumerate(scores):
+                    ax_bar.text(x[j] + i * bar_width, score + 0.01, f"{score:.2f}", 
+                               ha='center', va='bottom', fontsize=9)
+
             plt.tight_layout()
             st.pyplot(fig_bar)
         else:
@@ -150,16 +159,23 @@ if uploaded_file is not None:
     with col2:
         st.subheader("Accuracy vs. Threshold")
         fig_acc, ax_acc = plt.subplots(figsize=(10, 6))
+        
+        # Calculate dynamic y-axis limits for accuracy plot
+        acc_min = results_df['Accuracy'].min()
+        acc_max = results_df['Accuracy'].max()
+        acc_y_lower = max(0, acc_min - 0.1)
+        acc_y_upper = min(1, acc_max + 0.1)
+        
         for model in results_df['Model'].unique():
             model_data = results_df[results_df['Model'] == model]
             ax_acc.plot(model_data['Threshold'], model_data['Accuracy'], 
-                        marker='o', linestyle='-', label=model, linewidth=2)
+                      marker='o', linestyle='-', label=model, linewidth=2)
         
         ax_acc.axvline(x=selected_threshold, color='r', linestyle='--', alpha=0.5, label='Current Threshold')
         ax_acc.set_title("Accuracy vs. Information Gain Threshold")
         ax_acc.set_xlabel("Information Gain Threshold")
         ax_acc.set_ylabel("Accuracy")
-        ax_acc.set_ylim(0, 1.1)
+        ax_acc.set_ylim(acc_y_lower, acc_y_upper)
         ax_acc.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         ax_acc.grid(True, alpha=0.3)
         plt.tight_layout()
@@ -168,6 +184,13 @@ if uploaded_file is not None:
     # Performance trends plot
     st.subheader("Performance Trends")
     fig_trends, ax_trends = plt.subplots(figsize=(12, 6))
+    
+    # Calculate dynamic y-axis limits for trends plot
+    trend_min = min(results_df['Accuracy'].min(), results_df['Precision'].min(), results_df['Recall'].min())
+    trend_max = max(results_df['Accuracy'].max(), results_df['Precision'].max(), results_df['Recall'].max())
+    trend_y_lower = max(0, trend_min - 0.1)
+    trend_y_upper = min(1, trend_max + 0.1)
+    
     line_styles = ['-', '--', ':']
     for i, metric in enumerate(['Accuracy', 'Precision', 'Recall']):
         for j, model in enumerate(results_df['Model'].unique()):
@@ -180,7 +203,7 @@ if uploaded_file is not None:
     ax_trends.set_title("Model Performance vs. Information Gain Threshold")
     ax_trends.set_xlabel("Information Gain Threshold")
     ax_trends.set_ylabel("Score")
-    ax_trends.set_ylim(0, 1.1)
+    ax_trends.set_ylim(trend_y_lower, trend_y_upper)
     ax_trends.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     ax_trends.grid(True, alpha=0.3)
     plt.tight_layout()
