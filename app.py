@@ -76,9 +76,6 @@ if uploaded_file is not None:
     value=0.025,        # Default to your best threshold
     step=0.001
     )
-    # Verify selected features
-    st.write("Features at current threshold:", 
-         feature_df[feature_df["Information_Gain"] > selected_threshold]["Feature"].tolist())
     
     # Get selected features based on threshold
     selected_features = feature_df[feature_df["Information_Gain"] > selected_threshold]["Feature"].tolist()
