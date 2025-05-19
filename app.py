@@ -90,30 +90,29 @@ if uploaded_file is not None:
     selected = feature_df[feature_df["Information_Gain"] > thresh]["Feature"].tolist()
     if not selected:
         continue
+    # Select features based on current threshold
+    X_train_sel = X_train[selected]
+    X_test_sel = X_test[selected]
 
-        # Select features based on current threshold
-        X_train_sel = X_train[selected]
-        X_test_sel = X_test[selected]
-
-        # Define models to test
-        models = {
+    # Define models to test
+     models = {
             "Decision Tree": DecisionTreeClassifier(random_state=42),
             "KNN": KNeighborsClassifier(n_neighbors=5),
             "Naive Bayes": GaussianNB()
-        }
+    }
 
-        # Train and evaluate each model
-        for model_name, model in models.items():
-            model.fit(X_train_sel, y_train)
-            y_pred = model.predict(X_test_sel)
+    # Train and evaluate each model
+    for model_name, model in models.items():
+    model.fit(X_train_sel, y_train)
+    y_pred = model.predict(X_test_sel)
 
-            # Calculate metrics
-            acc = accuracy_score(y_test, y_pred)
-            prec = precision_score(y_test, y_pred, average='macro', zero_division=0)
-            rec = recall_score(y_test, y_pred, average='macro', zero_division=0)
+    # Calculate metrics
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average='macro', zero_division=0)
+    rec = recall_score(y_test, y_pred, average='macro', zero_division=0)
 
-            # Store results
-            results.append({
+    # Store results
+    results.append({
                 "Model": model_name,
                 "Threshold": round(thresh, 3),
                 "Accuracy": acc,
