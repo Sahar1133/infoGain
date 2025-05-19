@@ -87,7 +87,7 @@ if uploaded_file is not None:
 
     # Test different threshold values
     for thresh in np.arange(0.0, 0.051, 0.001): 
-    selected = feature_df[feature_df["Information_Gain"] > thresh]["Feature"].tolist()
+         selected = feature_df[feature_df["Information_Gain"] > thresh]["Feature"].tolist()
     if not selected:
         continue
     # Select features based on current threshold
