@@ -72,8 +72,8 @@ if uploaded_file is not None:
     selected_threshold = st.slider(
     "Select Threshold",
     min_value=0.0,
-    max_value=0.1,      # Extended range
-    value=0.025,        # Default to your best threshold
+    max_value=0.05,  
+    value=0.025,
     step=0.001
     )
     
@@ -86,10 +86,10 @@ if uploaded_file is not None:
     results = []  
 
     # Test different threshold values
-    for thresh in np.arange(0.0, 0.051, 0.001):
-        selected = feature_df[feature_df["Information_Gain"] > thresh]["Feature"].tolist()
-        if not selected:
-            continue
+    for thresh in np.arange(0.0, 0.051, 0.001): 
+    selected = feature_df[feature_df["Information_Gain"] > thresh]["Feature"].tolist()
+    if not selected:
+        continue
 
         # Select features based on current threshold
         X_train_sel = X_train[selected]
