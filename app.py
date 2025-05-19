@@ -69,11 +69,16 @@ if uploaded_file is not None:
     st.write(feature_df)
     
     # Create slider for selecting information gain threshold
-    selected_threshold = st.slider("Select Information Gain Threshold", 
-                                 min_value=0.0, 
-                                 max_value=0.05, 
-                                 value=0.005, 
-                                 step=0.001)
+    selected_threshold = st.slider(
+    "Select Threshold",
+    min_value=0.0,
+    max_value=0.1,      # Extended range
+    value=0.025,        # Default to your best threshold
+    step=0.001
+    )
+    # Verify selected features
+    st.write("Features at current threshold:", 
+         feature_df[feature_df["Information_Gain"] > selected_threshold]["Feature"].tolist())
     
     # Get selected features based on threshold
     selected_features = feature_df[feature_df["Information_Gain"] > selected_threshold]["Feature"].tolist()
