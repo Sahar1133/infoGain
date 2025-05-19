@@ -227,3 +227,4 @@ if uploaded_file is not None:
     ax_acc.legend()
     ax_acc.grid(True)
     st.pyplot(fig_acc)
+
