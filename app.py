@@ -203,48 +203,6 @@ if uploaded_file is not None:
         st.markdown(f"**{metric}:** Best Model: `{results_df.loc[idx, 'Model']}`, "
                     f"Threshold: `{results_df.loc[idx, 'Threshold']}`, "
                     f"Score: `{results_df.loc[idx, metric]:.2f}`")
-    import matplotlib.pyplot as plt
-
-# Create figure
-plt.figure(figsize=(12, 6))
-
-# Extract best scores for each metric
-best_accuracy = results_df.loc[results_df['Accuracy'].idxmax()]
-best_precision = results_df.loc[results_df['Precision'].idxmax()]
-best_recall = results_df.loc[results_df['Recall'].idxmax()]
-
-# Create bar positions
-x = np.arange(3)  # For 3 metrics
-width = 0.25  # Width of bars
-
-# Plot bars for each model's best scores
-plt.bar(x - width, 
-        [best_accuracy['Accuracy'], best_precision['Precision'], best_recall['Recall']],
-        width, 
-        label='Decision Tree',
-        color='#1f77b4')
-
-# Add threshold text on each bar
-for i, (val, thresh) in enumerate(zip(
-    [best_accuracy['Accuracy'], best_precision['Precision'], best_recall['Recall']],
-    [best_accuracy['Threshold'], best_precision['Threshold'], best_recall['Threshold']]
-)):
-    plt.text(x[i] - width, val + 0.01, 
-             f"Thresh: {thresh:.3f}", 
-             ha='center')
-
-# Customize plot
-plt.xticks(x, ['Accuracy', 'Precision', 'Recall'])
-plt.ylabel('Score')
-plt.title('Best Performance by Metric (Decision Tree)')
-plt.ylim(0, 1.1)
-plt.grid(True, axis='y', alpha=0.3)
-
-# Add horizontal line at 0.5 for reference
-plt.axhline(y=0.5, color='gray', linestyle='--', alpha=0.5)
-
-plt.tight_layout()
-st.pyplot(plt.gcf())
 
     # Create separate plot for accuracy vs. threshold
     st.subheader("Accuracy vs. Information Gain Threshold")
